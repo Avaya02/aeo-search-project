@@ -2,11 +2,7 @@
 
 import { useEffect, useRef } from "react"
 
-interface Props {
-  className?: string
-}
-
-export default function AnimatedBackground({ className }: Props) {
+export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -15,92 +11,109 @@ export default function AnimatedBackground({ className }: Props) {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    let dpr = Math.max(1, window.devicePixelRatio || 1)
-    let width = window.innerWidth
-    let height = window.innerHeight
-    canvas.width = Math.floor(width * dpr)
-    canvas.height = Math.floor(height * dpr)
-    canvas.style.width = width + "px"
-    canvas.style.height = height + "px"
-    ctx.scale(dpr, dpr)
+    let width = (canvas.width = window.innerWidth)
+    let height = (canvas.height = window.innerHeight)
+    let stars: Star[] = []
+    const starCount = 1; // We only want one star at a time
 
-    const spacing = 32
-    const dotRadius = 0.75
-    let t = 0
+    class Star {
+      x: number
+      y: number
+      radius: number
+      vx: number
+      vy: number
+      alpha: number
+      trail: { x: number; y: number }[]
 
-    // --- Compute foreground color from CSS variables ---
-    const rootStyles = getComputedStyle(document.documentElement)
-    const fgVar = rootStyles.getPropertyValue("--color-foreground")?.trim() || "#ffffff"
-
-    const toRGBA = (hex: string, alpha: number) => {
-      if (hex.startsWith("#")) {
-        const c = hex.slice(1)
-        const bigint = parseInt(c, 16)
-        const r = (bigint >> 16) & 255
-        const g = (bigint >> 8) & 255
-        const b = bigint & 255
-        return `rgba(${r},${g},${b},${alpha})`
+      constructor() {
+        this.x = Math.random() * width
+        this.y = Math.random() * height
+        this.radius = Math.random() * 1 + 0.5
+        const angle = Math.random() * Math.PI * 2
+        const speed = Math.random() * 2 + 1
+        this.vx = Math.cos(angle) * speed
+        this.vy = Math.sin(angle) * speed
+        this.alpha = 1
+        this.trail = []
       }
-      // fallback: try parsing as rgb() or named color
-      return hex
-    }
 
-    const draw = () => {
-      ctx.clearRect(0, 0, width, height)
+      reset() {
+        this.x = Math.random() * width
+        this.y = Math.random() * height
+        this.alpha = 1
+        this.trail = []
+        const angle = Math.random() * Math.PI * 2
+        const speed = Math.random() * 2 + 1
+        this.vx = Math.cos(angle) * speed
+        this.vy = Math.sin(angle) * speed
+      }
 
-      // subtle vignette
-      const g = ctx.createRadialGradient(
-        width * 0.5,
-        height * 0.45,
-        Math.min(width, height) * 0.1,
-        width * 0.5,
-        height * 0.5,
-        Math.max(width, height) * 0.9,
-      )
-      g.addColorStop(0, "transparent")
-      g.addColorStop(1, toRGBA(fgVar, 0.03))
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, width, height)
+      update() {
+        this.trail.push({ x: this.x, y: this.y })
+        if (this.trail.length > 10) {
+          this.trail.shift()
+        }
+        
+        this.x += this.vx
+        this.y += this.vy
+        this.alpha -= 0.01
 
-      // subtle drift
-      const ox = Math.sin(t * 0.0006) * 8
-      const oy = Math.cos(t * 0.0005) * 8
-
-      // draw dot grid
-      ctx.fillStyle = toRGBA(fgVar, 0.06)
-      for (let y = -spacing; y < height + spacing; y += spacing) {
-        for (let x = -spacing; x < width + spacing; x += spacing) {
-          ctx.beginPath()
-          ctx.arc(x + ox, y + oy, dotRadius, 0, Math.PI * 2)
-          ctx.fill()
+        if (this.alpha <= 0) {
+          this.reset()
         }
       }
 
-      t += 16
-      requestAnimationFrame(draw)
+      draw() {
+        ctx!.fillStyle = `rgba(255, 255, 255, ${this.alpha})`
+        ctx!.beginPath()
+        ctx!.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
+        ctx!.fill()
+        
+        // Draw trail
+        for (let i = 0; i < this.trail.length; i++) {
+          const ratio = (i + 1) / this.trail.length
+          ctx!.beginPath()
+          ctx!.arc(this.trail[i].x, this.trail[i].y, this.radius * ratio * 0.5, 0, Math.PI * 2)
+          ctx!.fillStyle = `rgba(255, 255, 255, ${this.alpha * ratio * 0.3})`
+          ctx!.fill()
+        }
+      }
     }
 
-    const onResize = () => {
-      dpr = Math.max(1, window.devicePixelRatio || 1)
-      width = window.innerWidth
-      height = window.innerHeight
-      canvas.width = Math.floor(width * dpr)
-      canvas.height = Math.floor(height * dpr)
-      canvas.style.width = width + "px"
-      canvas.style.height = height + "px"
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.scale(dpr, dpr)
+    const createStars = () => {
+      stars = []
+      for (let i = 0; i < starCount; i++) {
+        stars.push(new Star())
+      }
     }
 
-    window.addEventListener("resize", onResize)
-    draw()
-    return () => window.removeEventListener("resize", onResize)
+    const animate = () => {
+      ctx!.fillStyle = 'rgba(10, 10, 10, 0.1)'; // Slow fade effect
+      ctx!.fillRect(0, 0, width, height);
+      stars.forEach((s) => {
+        s.update()
+        s.draw()
+      })
+      requestAnimationFrame(animate)
+    }
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth
+      height = canvas.height = window.innerHeight
+      createStars()
+    }
+
+    window.addEventListener("resize", handleResize)
+    createStars()
+    animate()
+
+    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   return (
     <canvas
       ref={canvasRef}
-      className={`fixed inset-0 -z-10 pointer-events-none ${className || ""}`}
+      className="fixed inset-0 -z-10 pointer-events-none bg-[#0A0A0A]"
       aria-hidden="true"
     />
   )
