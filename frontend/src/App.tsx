@@ -134,9 +134,9 @@ const App: React.FC = () => {
                     </div>
                 </main>
                 
-                <footer className="text-center mt-8 text-sm text-gray-500">
+                {/* <footer className="text-center mt-8 text-sm text-gray-500">
                     <p>Built with PERN + TypeScript for the AEO Project.</p>
-                </footer>
+                </footer> */}
             </div>
         </div>
     );
