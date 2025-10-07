@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState} from "react";
 import type { FormEvent } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -8,7 +8,8 @@ import { Search } from "lucide-react";
 
 import AnimatedBackground from "./components/animated-background";
 import AnswerCard from "./components/answer-card";
-import type { ApiResponse, Citation } from "./components/type";
+import HistorySidebar from "./components/history-sidebar";
+import type { ApiResponse, Citation, SearchResult } from "./components/type";
 import { cn } from "./lib/utils";
 
 export default function App() {
@@ -17,6 +18,11 @@ export default function App() {
   const [citations, setCitations] = useState<Citation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // --- New State for History and Sidebar ---
+  const [history, setHistory] = useState<SearchResult[]>([]);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+
   const hasActivity = isLoading || !!answer || !!error;
 
   const handleSearch = async (e: FormEvent) => {
@@ -30,8 +36,11 @@ export default function App() {
 
     try {
       const response = await axios.post<ApiResponse>("http://localhost:5001/api/search", { query });
-      setAnswer(response.data.answer);
-      setCitations(response.data.citations);
+      const newResult = { query, ...response.data };
+      setAnswer(newResult.answer);
+      setCitations(newResult.citations);
+      // Add the new search to the beginning of the history list
+      setHistory(prev => [newResult, ...prev]);
     } catch (err) {
       setError("Failed to fetch results. Please try again.");
       console.error(err);
@@ -39,10 +48,26 @@ export default function App() {
       setIsLoading(false);
     }
   };
+  
+  // --- Function to handle clicks from the history sidebar ---
+  const handleHistoryClick = (result: SearchResult) => {
+    setQuery(result.query);
+    setAnswer(result.answer);
+    setCitations(result.citations);
+    setError('');
+    setIsLoading(false);
+    setSidebarOpen(false); // Close sidebar after selection
+  };
 
   return (
     <main className="dark relative min-h-dvh bg-[#0A0A0A] text-neutral-200 font-sans">
       <AnimatedBackground />
+      <HistorySidebar 
+        history={history}
+        onHistoryClick={handleHistoryClick}
+        isOpen={isSidebarOpen}
+        onToggle={() => setSidebarOpen(!isSidebarOpen)}
+      />
 
       <section
         className={cn(
