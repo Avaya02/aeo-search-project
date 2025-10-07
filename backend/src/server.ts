@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv';
 import { searchRouter } from './routes/search';
 import { connectDB } from './config/db';
+import 'dotenv/config'; 
+
 
 // Load environment variables
-dotenv.config();
+// dotenv.config();
 
 // Initialize Express app
 const app = express();

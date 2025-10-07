@@ -14,7 +14,7 @@ export default function AnimatedBackground() {
     let width = (canvas.width = window.innerWidth)
     let height = (canvas.height = window.innerHeight)
     let stars: Star[] = []
-    const starCount = 1;
+    const starCount = 60;
 
     class Star {
       // These are the properties that were causing the error
@@ -101,7 +101,7 @@ export default function AnimatedBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 -z-10 pointer-events-none bg-[#0A0A0A]"
+      className="fixed inset-0 -z-10  bg-[#0A0A0A] border-4 border-red-500"
       aria-hidden="true"
     />
   );
