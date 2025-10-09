@@ -60,7 +60,8 @@ export default function App() {
   };
 
   return (
-    <main className="dark relative min-h-dvh bg-[#0A0A0A] text-neutral-200 font-sans">
+    // --- FIX: Removed the solid background color "bg-[#0A0A0A]" from this line ---
+    <main className="dark relative min-h-dvh text-neutral-200 font-sans">
       <AnimatedBackground />
       <HistorySidebar 
         history={history}

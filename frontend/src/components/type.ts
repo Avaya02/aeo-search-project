@@ -10,8 +10,17 @@ export interface ApiResponse {
 }
 
 // --- New type for chat history ---
+// export interface SearchResult {
+//   timestamp(timestamp: any): import("react").ReactNode;
+//   query: string;
+//   
+//   citations: Citation[];
+//   timestamp? : number;
+// }
 export interface SearchResult {
   query: string;
+  response?: string;
   answer: string;
   citations: Citation[];
+  timestamp?: number;
 }

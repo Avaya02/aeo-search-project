@@ -13,95 +13,119 @@ export default function AnimatedBackground() {
 
     let width = (canvas.width = window.innerWidth)
     let height = (canvas.height = window.innerHeight)
-    let stars: Star[] = []
-    const starCount = 60;
+    let particles: Particle[] = []
+    
+    const mouse = {
+      x: width / 2,
+      y: height / 2,
+    }
 
-    class Star {
-      // These are the properties that were causing the error
-      x: number; 
-      y: number; 
-      radius: number; 
-      vx: number; 
-      vy: number; 
-      alpha: number;
-      trail: { x: number; y: number }[];
+    class Particle {
+      x: number; y: number; size: number;
+      vx: number; vy: number;
 
       constructor() {
-        // --- FIX: All properties are now initialized directly in the constructor ---
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        this.radius = Math.random() * 1 + 0.5;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 3 + 1; // Made stars a bit faster
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-        this.alpha = 1;
-        this.trail = [];
-      }
-
-      reset() {
-        // The reset logic is the same as the constructor
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.alpha = 1;
-        this.trail = [];
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 3 + 1;
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
+        this.size = Math.random() * 1.2 + 0.3; // Made particles slightly smaller
+        this.vx = Math.random() * 0.4 - 0.2;
+        this.vy = Math.random() * 0.4 - 0.2;
       }
 
       update() {
-        this.trail.push({ x: this.x, y: this.y });
-        if (this.trail.length > 15) { // A slightly longer trail
-          this.trail.shift();
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 250) { // Increased mouse influence radius
+          const forceDirectionX = dx / distance;
+          const forceDirectionY = dy / distance;
+          const force = (250 - distance) / 250 * 0.15; // Reduced force for a gentler pull
+          this.vx += forceDirectionX * force;
+          this.vy += forceDirectionY * force;
         }
+
+        this.vx *= 0.98;
+        this.vy *= 0.98;
         
         this.x += this.vx;
         this.y += this.vy;
-        this.alpha -= 0.015;
 
-        if (this.alpha <= 0) {
-          this.reset();
-        }
+        if (this.x > width || this.x < 0) this.vx *= -1;
+        if (this.y > height || this.y < 0) this.vy *= -1;
       }
 
       draw() {
-        ctx!.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
         ctx!.beginPath();
-        ctx!.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx!.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        // --- FIX: Reduced particle opacity from 0.5 to 0.25 ---
+        ctx!.fillStyle = 'rgba(128, 128, 128, 0.25)';
         ctx!.fill();
-        
-        for (let i = 0; i < this.trail.length; i++) {
-          const ratio = (i + 1) / this.trail.length;
-          ctx!.beginPath();
-          ctx!.arc(this.trail[i].x, this.trail[i].y, this.radius * ratio * 0.5, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(255, 255, 255, ${this.alpha * ratio * 0.3})`;
-          ctx!.fill();
+      }
+    }
+
+    const init = () => {
+      particles = [];
+      const numberOfParticles = Math.floor(width * height / 18000); // Reduced particle count
+      for (let i = 0; i < numberOfParticles; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    const connect = () => {
+      for (let a = 0; a < particles.length; a++) {
+        for (let b = a; b < particles.length; b++) {
+          const dx = particles[a].x - particles[b].x;
+          const dy = particles[a].y - particles[b].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < 150) { // Increased connection distance slightly
+            ctx!.beginPath();
+            ctx!.moveTo(particles[a].x, particles[a].y);
+            ctx!.lineTo(particles[b].x, particles[b].y);
+            // --- FIX: Halved the line opacity for a much fainter effect ---
+            const lineOpacity = (1 - distance / 150) * 0.5;
+            ctx!.strokeStyle = `rgba(128, 128, 128, ${lineOpacity})`;
+            ctx!.lineWidth = 0.2;
+            ctx!.stroke();
+          }
         }
       }
     }
 
-    const createStars = () => { stars = []; for (let i = 0; i < starCount; i++) stars.push(new Star()); }
     const animate = () => {
-      ctx!.fillStyle = 'rgba(10, 10, 10, 0.1)'; // Slow fade effect for trails
-      ctx!.fillRect(0, 0, width, height);
-      stars.forEach((s) => { s.update(); s.draw(); });
+      ctx!.clearRect(0, 0, width, height); // Clear canvas instead of fading
+      particles.forEach(p => { p.update(); p.draw(); });
+      connect();
       requestAnimationFrame(animate);
     }
-    const handleResize = () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; createStars(); }
 
-    window.addEventListener("resize", handleResize);
-    createStars();
+    const handleMouseMove = (event: MouseEvent) => {
+      mouse.x = event.x;
+      mouse.y = event.y;
+    }
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      init();
+    }
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('resize', handleResize);
+    
+    init();
     animate();
 
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 -z-10  bg-[#0A0A0A] border-4 border-red-500"
+      className="fixed inset-0 -z-10 pointer-events-none bg-[#0A0A0A]"
       aria-hidden="true"
     />
   );
