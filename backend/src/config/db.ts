@@ -1,15 +1,10 @@
+// File: backend/src/config/db.ts (Your Correct, Working Version)
+
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
+// This is the correct way to load the .env file from the 'backend' root
 dotenv.config();
-
-// Check for required environment variables
-const requiredEnv = ['PG_HOST', 'PG_USER', 'PG_PORT', 'PG_PASSWORD', 'PG_DATABASE'];
-for (const varName of requiredEnv) {
-    if (!process.env[varName]) {
-        console.warn(`Warning: Environment variable ${varName} is not set. Database connection may fail.`);
-    }
-}
 
 export const pool = new Pool({
     host: process.env.PG_HOST,
@@ -19,7 +14,6 @@ export const pool = new Pool({
     database: process.env.PG_DATABASE,
 });
 
-// Function to connect to the database and initialize the table
 export const connectDB = async () => {
     try {
         await pool.connect();
@@ -27,11 +21,10 @@ export const connectDB = async () => {
         await initializeDb();
     } catch (error) {
         console.error('PostgreSQL connection failed:', error);
-        process.exit(1); // Exit process with failure
+        process.exit(1); // This is important for stopping on DB errors
     }
 };
 
-// Function to create the search_history table if it doesn't exist
 const initializeDb = async () => {
     const createTableQuery = `
         CREATE TABLE IF NOT EXISTS search_history (
@@ -47,6 +40,5 @@ const initializeDb = async () => {
         console.log('Database table "search_history" is ready.');
     } catch (error) {
         console.error('Error initializing database table:', error);
-        // Do not exit, as the app can run without history logging
     }
 };
